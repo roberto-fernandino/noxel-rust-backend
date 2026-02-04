@@ -56,8 +56,10 @@ async fn main() -> Result<()> {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-    let database_url = std::env::var("DATABASE_URL").map_err(|_| AppError::MissingDatabaseUrl)?;
-
+    let database_url = match std::env::var("DATABASE_URL") {
+        Ok(url) => url,
+        Err(_) => return Err(anyhow::anyhow!("DATABASE_URL is not set")),
+    };
     let db: Pool<Postgres> = PgPool::connect(&database_url).await?;
 
     let state = AppState { db };
