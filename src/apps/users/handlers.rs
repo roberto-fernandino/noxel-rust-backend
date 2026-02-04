@@ -7,7 +7,7 @@ use uuid::Uuid;
 
 use crate::{middleware::auth::AuthContext, AppError, AppState};
 
-use super::{models::User, requests::CreateUserRequest};
+use super::{models::User, requests::{CreateUserRequest, SignupRequest}};
 
 #[utoipa::path(
     get,
@@ -67,4 +67,36 @@ pub async fn get_user(
         StatusCode::NOT_FOUND,
         Json(serde_json::json!({"error": "not found"})),
     ))
+}
+
+#[utoipa::path(
+    post,
+    path = "/users/signup/organizer",
+    request_body = SignupRequest,
+    responses(
+        (status = 201, description = "Organizer signup", body = User)
+    )
+)]
+pub async fn signup_organizer(
+    State(state): State<AppState>,
+    Json(req): Json<SignupRequest>,
+) -> Result<(StatusCode, Json<User>), AppError> {
+    let (user, _org) = super::sql::create_organizer_with_data(&state.db, req).await?;
+    Ok((StatusCode::CREATED, Json(user)))
+}
+
+#[utoipa::path(
+    post,
+    path = "/users/signup/attendee",
+    request_body = SignupRequest,
+    responses(
+        (status = 201, description = "Attendee signup", body = User)
+    )
+)]
+pub async fn signup_attendee(
+    State(state): State<AppState>,
+    Json(req): Json<SignupRequest>,
+) -> Result<(StatusCode, Json<User>), AppError> {
+    let (user, _consumer) = super::sql::create_attendee_with_data(&state.db, req).await?;
+    Ok((StatusCode::CREATED, Json(user)))
 }

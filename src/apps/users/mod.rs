@@ -5,4 +5,4 @@ pub mod requests;
 pub mod routes;
 pub mod sql;
 
-pub use routes::router;
+pub use routes::{public_router, protected_router, router};

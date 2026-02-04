@@ -141,6 +141,8 @@ async fn get_todo(
         apps::users::handlers::list_users,
         apps::users::handlers::create_user,
         apps::users::handlers::get_user,
+        apps::users::handlers::signup_organizer,
+        apps::users::handlers::signup_attendee,
         apps::tickets::handlers::list_tickets,
         apps::tickets::handlers::create_ticket,
         apps::tickets::handlers::get_ticket
@@ -151,7 +153,10 @@ async fn get_todo(
         CreateTodoRequest,
         apps::users::models::User,
         apps::users::requests::CreateUserRequest,
+        apps::users::requests::SignupRequest,
         apps::users::models::UserRole,
+        apps::users::models::OrganizerData,
+        apps::users::models::ConsumerData,
         apps::tickets::models::Ticket,
         apps::tickets::requests::CreateTicketRequest
     )),
@@ -177,7 +182,14 @@ async fn main() -> Result<(), AppError> {
 
     let state = AppState { db };
 
-    let users = apps::users::router().layer(axum_middleware::from_fn(middleware::auth::require_auth));
+    // Users: keep signup public; protect everything else.
+    let users = Router::new()
+        .merge(apps::users::public_router())
+        .merge(
+            apps::users::protected_router()
+                .layer(axum_middleware::from_fn(middleware::auth::require_auth)),
+        );
+
     let tickets = apps::tickets::router().layer(axum_middleware::from_fn(middleware::auth::require_auth));
 
     let app = Router::new()
