@@ -1,6 +1,10 @@
+mod apps;
+mod middleware;
+
 use axum::{
     extract::{Path, State},
     http::StatusCode,
+    middleware as axum_middleware,
     response::IntoResponse,
     routing::{get, post},
     Json, Router,
@@ -15,8 +19,8 @@ use utoipa_swagger_ui::SwaggerUi;
 use uuid::Uuid;
 
 #[derive(Clone)]
-struct AppState {
-    db: PgPool,
+pub struct AppState {
+    pub db: PgPool,
 }
 
 #[derive(Debug, Error)]
@@ -146,8 +150,27 @@ async fn get_todo(
 
 #[derive(OpenApi)]
 #[openapi(
-    paths(health, create_todo, get_todo),
-    components(schemas(HealthResponse, Todo, CreateTodoRequest)),
+    paths(
+        health,
+        create_todo,
+        get_todo,
+        apps::users::list_users,
+        apps::users::create_user,
+        apps::users::get_user,
+        apps::tickets::list_tickets,
+        apps::tickets::create_ticket,
+        apps::tickets::get_ticket
+    ),
+    components(schemas(
+        HealthResponse,
+        Todo,
+        CreateTodoRequest,
+        apps::users::User,
+        apps::users::CreateUserRequest,
+        apps::users::UserRole,
+        apps::tickets::Ticket,
+        apps::tickets::CreateTicketRequest
+    )),
     tags(
         (name = "noxel", description = "Noxel Rust Backend")
     )
@@ -170,10 +193,15 @@ async fn main() -> Result<(), AppError> {
 
     let state = AppState { db };
 
+    let users = apps::users::router().layer(axum_middleware::from_fn(middleware::auth::require_auth));
+    let tickets = apps::tickets::router().layer(axum_middleware::from_fn(middleware::auth::require_auth));
+
     let app = Router::new()
         .route("/health", get(health))
         .route("/todos", post(create_todo))
         .route("/todos/:id", get(get_todo))
+        .nest("/users", users)
+        .nest("/tickets", tickets)
         .merge(SwaggerUi::new("/docs").url("/api-doc/openapi.json", ApiDoc::openapi()))
         .with_state(state);
 
