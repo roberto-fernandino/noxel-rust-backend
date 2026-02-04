@@ -1,4 +1,5 @@
 mod apps;
+mod error;
 mod middleware;
 
 use anyhow::Result;
