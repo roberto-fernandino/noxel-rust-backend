@@ -5,27 +5,11 @@ use axum::{
     response::IntoResponse,
 };
 
+use crate::{apps::users::models::User, middleware};
+
 #[derive(Debug, Clone)]
 pub struct AuthContext {
-    pub user_id: String,
-    pub role: Role,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Role {
-    Organizer,
-    Attendee,
-    Admin,
-}
-
-impl Role {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            Role::Organizer => "organizer",
-            Role::Attendee => "attendee",
-            Role::Admin => "admin",
-        }
-    }
+    pub user: User,
 }
 
 /// Very small auth middleware placeholder.
@@ -36,36 +20,17 @@ impl Role {
 ///
 /// Replace this with real JWT/session validation.
 pub async fn require_auth(mut req: Request, next: Next) -> impl IntoResponse {
-    let auth = req
+    let token = req
         .headers()
         .get(header::AUTHORIZATION)
         .and_then(|v| v.to_str().ok())
         .unwrap_or("");
-
-    if !auth.starts_with("Bearer ") || auth.trim() == "Bearer" {
-        return (StatusCode::UNAUTHORIZED, "missing/invalid bearer token").into_response();
-    }
-
-    let user_id = req
-        .headers()
-        .get("x-user-id")
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("anonymous")
-        .to_string();
-
-    let role = match req
-        .headers()
-        .get("x-user-role")
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("attendee")
-        .to_ascii_lowercase()
-        .as_str()
-    {
-        "organizer" => Role::Organizer,
-        "admin" => Role::Admin,
-        _ => Role::Attendee,
+    let claims = match middleware::jwt::verify_token(token, &std::env::var("JWT_SECRET").unwrap()) {
+        Ok(claims) => claims,
+        Err(_) => return (StatusCode::UNAUTHORIZED, "invalid token").into_response(),
     };
-
-    req.extensions_mut().insert(AuthContext { user_id, role });
+    req.extensions_mut().insert(AuthContext {
+        user: claims.user.clone(),
+    });
     next.run(req).await
 }

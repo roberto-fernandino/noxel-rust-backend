@@ -21,6 +21,8 @@ utoipa-swagger-ui = { version = "7", features = ["axum"] }
 
 uuid = { version = "1", features = ["serde", "v4"] }
 chrono = { version = "0.4", features = ["serde"] }
+jsonwebtoken = "10.3.0"
+anyhow = "1.0.100"
 
 [profile.release]
 strip = true
