@@ -154,22 +154,22 @@ async fn get_todo(
         health,
         create_todo,
         get_todo,
-        apps::users::list_users,
-        apps::users::create_user,
-        apps::users::get_user,
-        apps::tickets::list_tickets,
-        apps::tickets::create_ticket,
-        apps::tickets::get_ticket
+        apps::users::handlers::list_users,
+        apps::users::handlers::create_user,
+        apps::users::handlers::get_user,
+        apps::tickets::handlers::list_tickets,
+        apps::tickets::handlers::create_ticket,
+        apps::tickets::handlers::get_ticket
     ),
     components(schemas(
         HealthResponse,
         Todo,
         CreateTodoRequest,
-        apps::users::User,
-        apps::users::CreateUserRequest,
-        apps::users::UserRole,
-        apps::tickets::Ticket,
-        apps::tickets::CreateTicketRequest
+        apps::users::models::User,
+        apps::users::requests::CreateUserRequest,
+        apps::users::models::UserRole,
+        apps::tickets::models::Ticket,
+        apps::tickets::requests::CreateTicketRequest
     )),
     tags(
         (name = "noxel", description = "Noxel Rust Backend")
