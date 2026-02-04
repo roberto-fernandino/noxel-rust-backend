@@ -1,0 +1,7 @@
+/target
+/.env
+/.env.*
+/.vercel
+/.idea
+/.vscode
+**/*.swp
