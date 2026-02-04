@@ -1,3 +1,7 @@
+use argon2::{
+    password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
+    Argon2,
+};
 use sqlx::{PgPool, Postgres, Transaction};
 use uuid::Uuid;
 
@@ -16,14 +20,27 @@ pub async fn get_user_by_id(_db: &PgPool, _id: Uuid) -> Result<Option<User>, sql
     Ok(None)
 }
 
+/// Hash a password using Argon2id and return the PHC string.
+fn hash_password(password: &str) -> Result<String, argon2::password_hash::Error> {
+    let salt = SaltString::generate(&mut OsRng);
+    let argon2 = Argon2::default(); // Uses Argon2id by default
+    let password_hash = argon2.hash_password(password.as_bytes(), &salt)?;
+    Ok(password_hash.to_string())
+}
+
 async fn insert_user(
     tx: &mut Transaction<'_, Postgres>,
     role: UserRole,
     req: &SignupRequest,
 ) -> Result<User, sqlx::Error> {
+    // Hash the password with Argon2id
+    let password_hash = hash_password(&req.password).map_err(|e| {
+        sqlx::Error::Protocol(format!("Failed to hash password: {}", e))
+    })?;
+
     let row: UserRow = sqlx::query_as(
-        r#"INSERT INTO users (full_name, role, email, gov_identification, birth_date)
-           VALUES ($1, $2, $3, $4, $5)
+        r#"INSERT INTO users (full_name, role, email, gov_identification, birth_date, password_hash)
+           VALUES ($1, $2, $3, $4, $5, $6)
            RETURNING id, full_name, role, email, gov_identification, birth_date"#,
     )
     .bind(&req.full_name)
@@ -31,6 +48,7 @@ async fn insert_user(
     .bind(&req.email)
     .bind(req.gov_identification)
     .bind(req.birth_date)
+    .bind(&password_hash)
     .fetch_one(&mut **tx)
     .await?;
 
