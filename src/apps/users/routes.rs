@@ -21,5 +21,7 @@ pub fn protected_router() -> Router<AppState> {
 
 /// Convenience router (no auth layers applied here).
 pub fn router() -> Router<AppState> {
-    Router::new().merge(public_router()).merge(protected_router())
+    Router::new()
+        .merge(public_router())
+        .merge(protected_router())
 }

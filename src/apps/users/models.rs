@@ -11,9 +11,11 @@ use crate::results::ApiError;
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum UserRole {
-    Organizer,
-    Attendee,
-    Admin,
+    Organizer,   // Producer
+    Attendee,    // Consumer
+    Admin,       // Us
+    Promoter,    // Promoter
+    Colaborator, // Colaborator
 }
 
 impl UserRole {
@@ -22,20 +24,30 @@ impl UserRole {
             UserRole::Organizer => "organizer",
             UserRole::Attendee => "attendee",
             UserRole::Admin => "admin",
+            UserRole::Promoter => "promoter",
+            UserRole::Colaborator => "colaborator",
         }
     }
 
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub fn from_str(s: &str) -> Result<Self, ApiError> {
         match s.to_lowercase().as_str() {
-            "organizer" => Some(UserRole::Organizer),
-            "attendee" => Some(UserRole::Attendee),
-            "admin" => Some(UserRole::Admin),
-            _ => None,
+            "organizer" => Ok(UserRole::Organizer),
+            "attendee" => Ok(UserRole::Attendee),
+            "admin" => Ok(UserRole::Admin),
+            "promoter" => Ok(UserRole::Promoter),
+            "colaborator" => Ok(UserRole::Colaborator),
+            _ => Err(ApiError::InvalidRole(s.to_string())),
         }
     }
 }
 
-#[derive(Debug, Clone, Serialize, ToSchema, FromRow)]
+impl Default for UserRole {
+    fn default() -> Self {
+        UserRole::Attendee
+    }
+}
+
+#[derive(Debug, Clone, Serialize, ToSchema, FromRow, Deserialize)]
 pub struct User {
     pub id: Uuid,
     pub full_name: String,
@@ -45,7 +57,7 @@ pub struct User {
     #[schema(nullable = true)]
     pub email: Option<String>,
 
-    #[schema(nullable = true, example = 12345678901)]
+    #[schema(nullable = true, example = 12345678901_i64)]
     pub gov_identification: Option<i64>,
 
     #[schema(nullable = true, example = "1990-01-31")]

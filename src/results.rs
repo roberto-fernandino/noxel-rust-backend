@@ -80,4 +80,4 @@ impl IntoResponse for ApiError {
     }
 }
 
-pub type ApiResult<T> = Result<(StatusCode, Json<T>), ApiError>;
+pub type ApiResult<S, T> = Result<(S, Json<T>), ApiError>;

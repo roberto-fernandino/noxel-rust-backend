@@ -1,5 +1,5 @@
 use crate::{results::ApiResult, state::AppState};
-use axum::{routing::get, Json, Router};
+use axum::{http::StatusCode, routing::get, Json, Router};
 use serde::Serialize;
 use utoipa::{OpenApi, ToSchema};
 
@@ -14,23 +14,31 @@ struct HealthResponse {
         (status = 200, description = "Service is healthy", body = HealthResponse)
     )
 )]
-async fn health() -> ApiResult<Json<HealthResponse>> {
-    Ok(Json(HealthResponse { ok: true }))
+async fn health() -> ApiResult<StatusCode, HealthResponse> {
+    Ok((StatusCode::OK, Json(HealthResponse { ok: true })))
 }
 
 #[derive(OpenApi)]
 #[openapi(
     paths(
         health,
+        crate::apps::users::handlers::signup_organizer,
+        crate::apps::users::handlers::signup_attendee,
     ),
     components(schemas(
         HealthResponse,
+        crate::apps::users::models::User,
+        crate::apps::users::requests::SignupAttendeeRequest, 
+        crate::apps::users::requests::SignupOrganizerRequest,
     )),
     tags(
         (name = "noxel", description = "Noxel Rust Backend")
     )
 )]
 struct ApiDoc;
+
 pub fn router() -> Router<AppState> {
-    Router::new().route("/health", get(health))
+    Router::new()
+        .route("/health", get(health))
+        .merge(crate::apps::users::routes::router())
 }
