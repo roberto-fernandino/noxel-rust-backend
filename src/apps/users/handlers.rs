@@ -1,5 +1,5 @@
 use axum::{extract::State, http::StatusCode, Extension, Json};
-use tracing::info;
+use tracing::{info, error};
 
 use crate::{
     apps::users::{
@@ -43,9 +43,14 @@ pub async fn signup_organizer(
 
     let (user, _org) = super::sql::create_organizer_with_data(&state.db, req).await?;
 
-    let secret = std::env::var("JWT_SECRET").map_err(|_| ApiError::Internal)?;
-    let token =
-        jwt::generate_token(&user, &secret, 60 * 60 * 24).map_err(|_| ApiError::Internal)?;
+    let secret = std::env::var("JWT_SECRET").map_err(|e| {
+        error!(target: "api.users.signup", cause = %e, "JWT_SECRET env var not set");
+        ApiError::MissingJwtSecret
+    })?;
+    let token = jwt::generate_token(&user, &secret, 60 * 60 * 24).map_err(|e| {
+        error!(target: "api.users.signup", cause = %e, "JWT token generation failed");
+        ApiError::Internal
+    })?;
 
     info!(
         target: "api.users.signup",
@@ -89,9 +94,14 @@ pub async fn signup_attendee(
 
     let (user, attendee_data) = super::sql::create_attendee_with_data(&state.db, req).await?;
 
-    let secret = std::env::var("JWT_SECRET").map_err(|_| ApiError::Internal)?;
-    let token =
-        jwt::generate_token(&user, &secret, 60 * 60 * 24).map_err(|_| ApiError::Internal)?;
+    let secret = std::env::var("JWT_SECRET").map_err(|e| {
+        error!(target: "api.users.signup", cause = %e, "JWT_SECRET env var not set");
+        ApiError::MissingJwtSecret
+    })?;
+    let token = jwt::generate_token(&user, &secret, 60 * 60 * 24).map_err(|e| {
+        error!(target: "api.users.signup", cause = %e, "JWT token generation failed");
+        ApiError::Internal
+    })?;
 
     info!(
         target: "api.users.signup",

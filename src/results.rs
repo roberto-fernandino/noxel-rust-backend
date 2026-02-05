@@ -34,6 +34,9 @@ pub enum ApiError {
     #[error("missing env var DATABASE_URL")]
     MissingDatabaseUrl,
 
+    #[error("missing env var JWT_SECRET")]
+    MissingJwtSecret,
+
     #[error("database error")]
     Db(#[from] sqlx::Error),
 
@@ -49,6 +52,7 @@ impl ApiError {
             ApiError::NotFound => StatusCode::NOT_FOUND,
             ApiError::BadRequest(_) => StatusCode::BAD_REQUEST,
             ApiError::MissingDatabaseUrl => StatusCode::INTERNAL_SERVER_ERROR,
+            ApiError::MissingJwtSecret => StatusCode::INTERNAL_SERVER_ERROR,
             ApiError::Db(_) => StatusCode::INTERNAL_SERVER_ERROR,
             ApiError::Internal => StatusCode::INTERNAL_SERVER_ERROR,
             ApiError::InvalidRole(_) => StatusCode::BAD_REQUEST,
@@ -62,6 +66,7 @@ impl ApiError {
             ApiError::NotFound => Some("not_found"),
             ApiError::BadRequest(_) => Some("bad_request"),
             ApiError::MissingDatabaseUrl => Some("missing_database_url"),
+            ApiError::MissingJwtSecret => Some("missing_jwt_secret"),
             ApiError::Db(_) => Some("db_error"),
             ApiError::Internal => Some("internal"),
             ApiError::InvalidRole(_) => Some("invalid_role"),
