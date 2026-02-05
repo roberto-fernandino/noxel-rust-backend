@@ -43,6 +43,6 @@ struct ApiDoc;
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/health", get(health))
-        .merge(crate::apps::users::routes::router())
+        .nest("/users", crate::apps::users::routes::router())
         .merge(SwaggerUi::new("/swagger-ui").url("/api-doc/openapi.json", ApiDoc::openapi()))
 }

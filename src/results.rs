@@ -69,9 +69,43 @@ impl ApiError {
     }
 }
 
+/// Build full cause chain so logs show the actual root cause (e.g. Postgres message).
+fn error_chain(err: &(dyn std::error::Error + 'static)) -> String {
+    let mut s = err.to_string();
+    let mut src = err.source();
+    while let Some(e) = src {
+        s.push_str(" → ");
+        s.push_str(&e.to_string());
+        src = e.source();
+    }
+    s
+}
+
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
         let status = self.status();
+        if status.is_server_error() {
+            match &self {
+                ApiError::Db(e) => {
+                    let chain = error_chain(e);
+                    tracing::error!(
+                        api_error = %self,
+                        code = ?self.code(),
+                        cause_chain = %chain,
+                        "API ERROR 5xx — read cause_chain for root cause (e.g. missing table/column)"
+                    );
+                }
+                _ => {
+                    tracing::error!(
+                        api_error = %self,
+                        code = ?self.code(),
+                        "API ERROR 5xx"
+                    );
+                }
+            }
+        } else {
+            tracing::debug!(api_error = %self, status = %status, "API error 4xx");
+        }
         let body = ApiErrorBody {
             error: self.to_string(),
             code: self.code().map(|s| s.to_string()),

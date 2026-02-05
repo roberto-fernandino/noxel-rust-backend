@@ -5,11 +5,31 @@ mod routes;
 mod state;
 
 use anyhow::Result;
+use axum::{extract::Request, middleware::Next};
 use sqlx::{PgPool, Pool, Postgres};
 use std::net::SocketAddr;
+use std::time::Instant;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use crate::{results::ApiError, state::AppState};
+
+async fn log_requests(request: Request, next: Next) -> axum::response::Response {
+    let method = request.method().clone();
+    let uri = request.uri().clone();
+    let start = Instant::now();
+    // Span so every log in this request (including error in IntoResponse) gets method + uri
+    let span = tracing::info_span!("request", %method, %uri);
+    let _guard = span.enter();
+    tracing::info!("request");
+    let response = next.run(request).await;
+    let status = response.status();
+    let elapsed_ms = start.elapsed().as_millis();
+    tracing::info!(%status, elapsed_ms, "response");
+    if status.is_server_error() {
+        tracing::error!(%status, elapsed_ms, "response 5xx — see ERROR above for cause");
+    }
+    response
+}
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -79,7 +99,9 @@ async fn main() -> Result<()> {
         .and_then(|s| s.parse().ok())
         .unwrap_or(8080);
 
-    let app = routes::router().with_state(state);
+    let app = routes::router()
+        .with_state(state)
+        .layer(axum::middleware::from_fn(log_requests));
 
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
     tracing::info!(%addr, "listening");
