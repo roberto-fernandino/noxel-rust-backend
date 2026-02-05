@@ -13,21 +13,63 @@ use crate::{results::ApiError, state::AppState};
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    // Load .env file
+    if dotenv::dotenv().is_ok() {
+        eprintln!("Loaded .env file");
+    } else {
+        eprintln!("Warning: .env file not found, using system environment variables");
+    }
+
+    // Read RUST_LOG from .env file directly (prioritize .env over system env)
+    let filter = std::fs::read_to_string(".env")
+        .ok()
+        .and_then(|content| {
+            content
+                .lines()
+                .find(|line| line.starts_with("RUST_LOG="))
+                .and_then(|line| line.splitn(2, '=').nth(1).map(|s| s.trim().to_string()))
+        })
+        .or_else(|| std::env::var("RUST_LOG").ok())
+        .unwrap_or_else(|| "info,sqlx=warn".to_string());
+
+    // Print to stderr so we can see it immediately (before tracing is initialized)
+    eprintln!("Initializing logging with RUST_LOG={}", filter);
+
     tracing_subscriber::registry()
         .with(
-            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
-                // Default to info, make SQLx logs visible when needed.
-                "info,sqlx=warn".into()
+            tracing_subscriber::EnvFilter::try_new(&filter).unwrap_or_else(|e| {
+                eprintln!("Failed to parse RUST_LOG='{}': {}", filter, e);
+                tracing_subscriber::EnvFilter::new("info,sqlx=warn")
             }),
         )
-        .with(tracing_subscriber::fmt::layer())
+        .with(
+            tracing_subscriber::fmt::layer()
+                .with_target(true)
+                .with_file(true)
+                .with_line_number(true),
+        )
         .init();
 
+    tracing::debug!("Logging initialized with RUST_LOG={}", filter);
+    tracing::info!("Application starting...");
+
     let database_url = match std::env::var("DATABASE_URL") {
-        Ok(url) => url,
-        Err(_) => return Err(ApiError::MissingDatabaseUrl.into()),
+        Ok(url) => {
+            tracing::debug!(
+                "Connecting to database at {}",
+                url.split('@').nth(1).unwrap_or("***")
+            );
+            url
+        }
+        Err(_) => {
+            tracing::error!("DATABASE_URL environment variable not set");
+            return Err(ApiError::MissingDatabaseUrl.into());
+        }
     };
+
+    tracing::info!("Connecting to database...");
     let db: Pool<Postgres> = PgPool::connect(&database_url).await?;
+    tracing::info!("Database connection established");
 
     let state = AppState { db };
 

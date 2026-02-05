@@ -13,10 +13,8 @@ pub struct AuthContext {
 }
 
 /// Very small auth middleware placeholder.
-///
 /// Current behavior (intentionally simple):
 /// - Requires `Authorization: Bearer <something>`
-/// - Optionally reads `x-user-id` and `x-user-role`.
 ///
 /// Replace this with real JWT/session validation.
 pub async fn require_auth(mut req: Request, next: Next) -> impl IntoResponse {

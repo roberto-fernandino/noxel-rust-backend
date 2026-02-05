@@ -1,3 +1,7 @@
+use super::{
+    models::{AttendeeData, OrganizerData, User, UserRole, UserRow},
+    requests::{SignupAttendeeRequest, SignupOrganizerRequest},
+};
 use argon2::{
     password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
     Argon2,
@@ -5,18 +9,12 @@ use argon2::{
 use sqlx::{PgPool, Postgres, Transaction};
 use uuid::Uuid;
 
-use super::{
-    models::{ConsumerData, OrganizerData, User, UserRole, UserRow},
-    requests::{SignupAttendeeRequest, SignupOrganizerRequest},
-};
-
 /// Common accessor interface for different signup request payloads.
 trait SignupRequestLike {
     fn full_name(&self) -> &str;
     fn password(&self) -> &str;
-    fn email(&self) -> Option<&str>;
-    fn gov_identification(&self) -> Option<i64>;
-    fn birth_date(&self) -> Option<chrono::NaiveDate>;
+    fn email(&self) -> &str;
+    fn gov_identification(&self) -> i64;
 }
 
 impl SignupRequestLike for SignupOrganizerRequest {
@@ -28,16 +26,12 @@ impl SignupRequestLike for SignupOrganizerRequest {
         &self.password
     }
 
-    fn email(&self) -> Option<&str> {
-        self.email.as_deref()
+    fn email(&self) -> &str {
+        &self.email
     }
 
-    fn gov_identification(&self) -> Option<i64> {
+    fn gov_identification(&self) -> i64 {
         self.gov_identification
-    }
-
-    fn birth_date(&self) -> Option<chrono::NaiveDate> {
-        self.birth_date
     }
 }
 
@@ -50,16 +44,12 @@ impl SignupRequestLike for SignupAttendeeRequest {
         &self.password
     }
 
-    fn email(&self) -> Option<&str> {
-        self.email.as_deref()
+    fn email(&self) -> &str {
+        &self.email
     }
 
-    fn gov_identification(&self) -> Option<i64> {
+    fn gov_identification(&self) -> i64 {
         self.gov_identification
-    }
-
-    fn birth_date(&self) -> Option<chrono::NaiveDate> {
-        Some(self.birth_date)
     }
 }
 
@@ -81,15 +71,14 @@ async fn insert_user<R: SignupRequestLike>(
         .map_err(|e| sqlx::Error::Protocol(format!("Failed to hash password: {}", e)))?;
 
     let row: UserRow = sqlx::query_as(
-        r#"INSERT INTO users (full_name, role, email, gov_identification, birth_date, password_hash)
-           VALUES ($1, $2, $3, $4, $5, $6)
-           RETURNING id, full_name, role, email, gov_identification, birth_date"#,
+        r#"INSERT INTO users (full_name, role, email, gov_identification, password_hash)
+           VALUES ($1, $2, $3, $4, $5)
+           RETURNING id, full_name, role, email, gov_identification"#,
     )
     .bind(req.full_name())
     .bind(role.as_str())
     .bind(req.email())
     .bind(req.gov_identification())
-    .bind(req.birth_date())
     .bind(&password_hash)
     .fetch_one(&mut **tx)
     .await?;
@@ -120,19 +109,41 @@ pub async fn create_organizer_with_data(
 pub async fn create_attendee_with_data(
     db: &PgPool,
     req: SignupAttendeeRequest,
-) -> Result<(User, ConsumerData), sqlx::Error> {
+) -> Result<(User, AttendeeData), sqlx::Error> {
     let mut tx = db.begin().await?;
     let user = insert_user(&mut tx, UserRole::Attendee, &req).await?;
 
-    let consumer: ConsumerData = sqlx::query_as(
-        r#"INSERT INTO consumer_data (user_id)
-           VALUES ($1)
-           RETURNING id, user_id, created_at"#,
+    let consumer: AttendeeData = sqlx::query_as::<_, AttendeeData>(
+        r#"INSERT INTO consumer_data (user_id, phone, birth_date)
+           VALUES ($1, $2, $3)
+           RETURNING id, user_id, phone, birth_date, created_at"#,
     )
     .bind(user.id)
+    .bind(&req.phone)
+    .bind(req.birth_date)
     .fetch_one(&mut *tx)
     .await?;
 
     tx.commit().await?;
     Ok((user, consumer))
+}
+
+impl AttendeeData {
+    pub async fn get_data(pool: &PgPool, user_id: Uuid) -> Result<Self, sqlx::Error> {
+        sqlx::query_as::<_, AttendeeData>(r#"SELECT * FROM attendee_data WHERE user_id = $1"#)
+            .bind(user_id)
+            .fetch_one(pool)
+            .await
+            .map_err(|e| e)
+    }
+}
+
+impl OrganizerData {
+    pub async fn get_data(pool: &PgPool, user_id: Uuid) -> Result<Self, sqlx::Error> {
+        sqlx::query_as::<_, OrganizerData>(r#"SELECT * FROM organizer_data WHERE user_id = $1"#)
+            .bind(user_id)
+            .fetch_one(pool)
+            .await
+            .map_err(|e| e)
+    }
 }

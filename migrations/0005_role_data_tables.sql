@@ -3,6 +3,7 @@ CREATE TABLE
   IF NOT EXISTS organizer_data (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4 (),
     user_id uuid NOT NULL UNIQUE REFERENCES users (id) ON DELETE CASCADE,
+    apelido varchar(64),
     created_at timestamptz NOT NULL DEFAULT now ()
   );
 
@@ -11,5 +12,6 @@ CREATE TABLE
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4 (),
     user_id uuid NOT NULL UNIQUE REFERENCES users (id) ON DELETE CASCADE,
     phone varchar(15) NOT NULL,
+    birth_date date NOT NULL,
     created_at timestamptz NOT NULL DEFAULT now ()
   );

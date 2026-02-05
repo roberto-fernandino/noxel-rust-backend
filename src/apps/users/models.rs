@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
+use sqlx::{FromRow, PgPool};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
@@ -51,17 +51,15 @@ impl Default for UserRole {
 pub struct User {
     pub id: Uuid,
     pub full_name: String,
+
     #[sqlx(skip)]
     pub role: UserRole,
 
-    #[schema(nullable = true)]
-    pub email: Option<String>,
+    #[schema(nullable = false)]
+    pub email: String,
 
-    #[schema(nullable = true, example = 12345678901_i64)]
-    pub gov_identification: Option<i64>,
-
-    #[schema(nullable = true, example = "1990-01-31")]
-    pub birth_date: Option<chrono::NaiveDate>,
+    #[schema(nullable = false, example = 12345678901_i64)]
+    pub gov_identification: i64,
 }
 
 /// Row returned from database for User (with role as string)
@@ -70,9 +68,8 @@ pub struct UserRow {
     pub id: Uuid,
     pub full_name: String,
     pub role: String,
-    pub email: Option<String>,
-    pub gov_identification: Option<i64>,
-    pub birth_date: Option<chrono::NaiveDate>,
+    pub email: String,
+    pub gov_identification: i64,
 }
 
 impl UserRow {
@@ -83,7 +80,6 @@ impl UserRow {
             role: UserRole::from_str(&self.role).unwrap_or(UserRole::Attendee),
             email: self.email,
             gov_identification: self.gov_identification,
-            birth_date: self.birth_date,
         }
     }
 }
@@ -98,8 +94,18 @@ pub struct OrganizerData {
 
 /// Consumer/Attendee-specific data (1:1 with users where role = attendee)
 #[derive(Debug, Clone, Serialize, ToSchema, FromRow)]
-pub struct ConsumerData {
+pub struct AttendeeData {
     pub id: Uuid,
     pub user_id: Uuid,
+    #[schema(nullable = false, example = "+5511999999999")]
+    pub phone: String,
+    #[schema(nullable = false, example = "1990-01-31")]
+    pub birth_date: chrono::NaiveDate,
     pub created_at: chrono::DateTime<chrono::Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub enum RelatedData {
+    Organizer(OrganizerData),
+    Attendee(AttendeeData),
 }

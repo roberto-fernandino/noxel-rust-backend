@@ -1,10 +1,18 @@
 use axum::{
     extract::{Path, State},
     http::StatusCode,
-    Json,
+    Extension, Json,
 };
 
-use crate::{results::ApiResult, AppState};
+use crate::{
+    apps::users::{
+        dto::UserWithRelatedData,
+        models::{AttendeeData, OrganizerData, RelatedData, UserRole},
+    },
+    middleware::auth::AuthContext,
+    results::ApiResult,
+    AppState,
+};
 
 use super::{
     models::User,
@@ -41,4 +49,32 @@ pub async fn signup_attendee(
 ) -> ApiResult<StatusCode, User> {
     let (user, _consumer) = super::sql::create_attendee_with_data(&state.db, req).await?;
     Ok((StatusCode::CREATED, Json(user)))
+}
+
+#[utoipa::path(
+    get,
+    path = "/users/me",
+    responses(
+        (status = 200, description = "Get current user", body = User)
+    )
+)]
+pub async fn get_me(
+    Extension(auth_context): Extension<AuthContext>,
+    State(state): State<AppState>,
+) -> ApiResult<StatusCode, UserWithRelatedData> {
+    Ok((
+        StatusCode::OK,
+        Json(UserWithRelatedData {
+            user: auth_context.user.clone(),
+            related_data: match auth_context.user.role {
+                UserRole::Organizer => Some(RelatedData::Organizer(
+                    OrganizerData::get_data(&state.db, auth_context.user.id).await?,
+                )),
+                UserRole::Attendee => Some(RelatedData::Attendee(
+                    AttendeeData::get_data(&state.db, auth_context.user.id).await?,
+                )),
+                _ => None,
+            },
+        }),
+    ))
 }

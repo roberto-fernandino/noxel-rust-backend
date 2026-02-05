@@ -9,15 +9,12 @@ pub struct SignupOrganizerRequest {
     /// User's password (will be hashed with Argon2id)
     pub password: String,
 
-    #[schema(nullable = true)]
-    pub email: Option<String>,
+    #[schema(nullable = false)]
+    pub email: String,
 
     /// CPF (11 digits) or CNPJ (14 digits)
-    #[schema(nullable = true, example = 12345678901_i64)]
-    pub gov_identification: Option<i64>,
-
-    #[schema(nullable = true, example = "1990-01-31")]
-    pub birth_date: Option<chrono::NaiveDate>,
+    #[schema(nullable = false, example = 12345678901_i64)]
+    pub gov_identification: i64,
 }
 /// Request body for public signup endpoints.
 /// Role is inferred from the endpoint (organizer or attendee).
@@ -30,14 +27,14 @@ pub struct SignupAttendeeRequest {
     pub password: String,
 
     #[schema(nullable = false, example = "+5511999999999")]
-    pub phone: Option<String>,
+    pub phone: String,
 
     #[schema(nullable = false)]
-    pub email: Option<String>,
+    pub email: String,
 
     /// CPF (11 digits) or CNPJ (14 digits)
     #[schema(nullable = false, example = 12345678901_i64)]
-    pub gov_identification: Option<i64>,
+    pub gov_identification: i64,
 
     #[schema(nullable = false, example = "1990-01-31")]
     pub birth_date: chrono::NaiveDate,

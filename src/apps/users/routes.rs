@@ -1,9 +1,10 @@
 use axum::{
+    middleware::from_fn,
     routing::{get, post},
     Router,
 };
 
-use crate::AppState;
+use crate::{middleware::auth::require_auth, AppState};
 
 use super::handlers;
 
@@ -17,6 +18,8 @@ pub fn public_router() -> Router<AppState> {
 /// Authenticated endpoints.
 pub fn protected_router() -> Router<AppState> {
     Router::new()
+        .route("/users/me", get(handlers::get_me))
+        .route_layer(from_fn(require_auth))
 }
 
 /// Convenience router (no auth layers applied here).
