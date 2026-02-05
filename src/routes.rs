@@ -28,8 +28,9 @@ async fn health() -> ApiResult<StatusCode, HealthResponse> {
     ),
     components(schemas(
         HealthResponse,
+        crate::apps::users::dto::SignupResponse,
         crate::apps::users::models::User,
-        crate::apps::users::requests::SignupAttendeeRequest, 
+        crate::apps::users::requests::SignupAttendeeRequest,
         crate::apps::users::requests::SignupOrganizerRequest,
     )),
     tags(

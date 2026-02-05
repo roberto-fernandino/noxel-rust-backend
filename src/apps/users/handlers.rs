@@ -7,11 +7,11 @@ use tracing::info;
 
 use crate::{
     apps::users::{
-        dto::UserWithRelatedData,
+        dto::{SignupResponse, UserWithRelatedData},
         models::{AttendeeData, OrganizerData, RelatedData, UserRole},
     },
-    middleware::auth::AuthContext,
-    results::ApiResult,
+    middleware::{auth::AuthContext, jwt},
+    results::{ApiError, ApiResult},
     AppState,
 };
 
@@ -25,13 +25,13 @@ use super::{
     path = "/users/signup/organizer",
     request_body = SignupOrganizerRequest,
     responses(
-        (status = 201, description = "Organizer signup", body = User)
+        (status = 201, description = "Organizer signup", body = SignupResponse)
     )
 )]
 pub async fn signup_organizer(
     State(state): State<AppState>,
     Json(req): Json<SignupOrganizerRequest>,
-) -> ApiResult<StatusCode, User> {
+) -> ApiResult<StatusCode, SignupResponse> {
     // Never log raw passwords.
     info!(
         target: "api.users.signup",
@@ -46,6 +46,9 @@ pub async fn signup_organizer(
 
     let (user, _org) = super::sql::create_organizer_with_data(&state.db, req).await?;
 
+    let secret = std::env::var("JWT_SECRET").map_err(|_| ApiError::Internal)?;
+    let token = jwt::generate_token(&user, &secret, 60 * 60 * 24).map_err(|_| ApiError::Internal)?;
+
     info!(
         target: "api.users.signup",
         flow = "organizer",
@@ -58,7 +61,13 @@ pub async fn signup_organizer(
         "signup response"
     );
 
-    Ok((StatusCode::CREATED, Json(user)))
+    Ok((
+        StatusCode::CREATED,
+        Json(SignupResponse {
+            token,
+            user,
+        }),
+    ))
 }
 
 #[utoipa::path(
@@ -66,13 +75,13 @@ pub async fn signup_organizer(
     path = "/users/signup/attendee",
     request_body = SignupAttendeeRequest,
     responses(
-        (status = 201, description = "Attendee signup", body = User)
+        (status = 201, description = "Attendee signup", body = SignupResponse)
     )
 )]
 pub async fn signup_attendee(
     State(state): State<AppState>,
     Json(req): Json<SignupAttendeeRequest>,
-) -> ApiResult<StatusCode, User> {
+) -> ApiResult<StatusCode, SignupResponse> {
     // Never log raw passwords.
     info!(
         target: "api.users.signup",
@@ -87,6 +96,9 @@ pub async fn signup_attendee(
 
     let (user, _consumer) = super::sql::create_attendee_with_data(&state.db, req).await?;
 
+    let secret = std::env::var("JWT_SECRET").map_err(|_| ApiError::Internal)?;
+    let token = jwt::generate_token(&user, &secret, 60 * 60 * 24).map_err(|_| ApiError::Internal)?;
+
     info!(
         target: "api.users.signup",
         flow = "attendee",
@@ -99,7 +111,13 @@ pub async fn signup_attendee(
         "signup response"
     );
 
-    Ok((StatusCode::CREATED, Json(user)))
+    Ok((
+        StatusCode::CREATED,
+        Json(SignupResponse {
+            token,
+            user,
+        }),
+    ))
 }
 
 #[utoipa::path(

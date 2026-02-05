@@ -18,15 +18,27 @@ pub struct AuthContext {
 ///
 /// Replace this with real JWT/session validation.
 pub async fn require_auth(mut req: Request, next: Next) -> impl IntoResponse {
-    let token = req
+    let auth = req
         .headers()
         .get(header::AUTHORIZATION)
         .and_then(|v| v.to_str().ok())
         .unwrap_or("");
-    let claims = match middleware::jwt::verify_token(token, &std::env::var("JWT_SECRET").unwrap()) {
+
+    let token = auth.strip_prefix("Bearer ").unwrap_or(auth);
+    if token.trim().is_empty() {
+        return (StatusCode::UNAUTHORIZED, "missing token").into_response();
+    }
+
+    let secret = match std::env::var("JWT_SECRET") {
+        Ok(v) if !v.is_empty() => v,
+        _ => return (StatusCode::INTERNAL_SERVER_ERROR, "missing JWT_SECRET").into_response(),
+    };
+
+    let claims = match middleware::jwt::verify_token(token, &secret) {
         Ok(claims) => claims,
         Err(_) => return (StatusCode::UNAUTHORIZED, "invalid token").into_response(),
     };
+
     req.extensions_mut().insert(AuthContext {
         user: claims.user.clone(),
     });

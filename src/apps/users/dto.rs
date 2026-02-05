@@ -14,3 +14,9 @@ pub struct UserWithRelatedData {
     pub user: User,
     pub related_data: Option<RelatedData>,
 }
+
+#[derive(Debug, serde::Serialize, ToSchema)]
+pub struct SignupResponse {
+    pub token: String,
+    pub user: User,
+}
