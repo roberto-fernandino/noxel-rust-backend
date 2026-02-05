@@ -1,17 +1,20 @@
 mod apps;
+mod cors;
 mod middleware;
 mod results;
 mod routes;
 mod state;
 
 use anyhow::Result;
+
 use axum::{extract::Request, middleware::Next};
 use sqlx::{PgPool, Pool, Postgres};
 use std::net::SocketAddr;
 use std::time::Instant;
+
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-use crate::{results::ApiError, state::AppState};
+use crate::{cors::cors_layer_from_env, results::ApiError, state::AppState};
 
 async fn log_requests(request: Request, next: Next) -> axum::response::Response {
     let method = request.method().clone();
@@ -101,6 +104,7 @@ async fn main() -> Result<()> {
 
     let app = routes::router()
         .with_state(state)
+        .layer(cors_layer_from_env())
         .layer(axum::middleware::from_fn(log_requests));
 
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
