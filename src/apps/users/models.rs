@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, PgPool};
+use sqlx::FromRow;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
@@ -7,7 +7,12 @@ use crate::results::ApiError;
 
 /// Roles supported by the system.
 ///
-/// Naming: use `Attendee` for the ticket-buying/consuming role.
+/// Roles:
+/// - `Organizer`: Producer of the event
+/// - `Attendee`: Consumer of the event
+/// - `Admin`: Administrator of the system
+/// - `Promoter`: Promoter of the event
+/// - `Colaborator`: QR code reader in the event
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum UserRole {
@@ -49,13 +54,15 @@ impl Default for UserRole {
 
 #[derive(Debug, Clone, Serialize, ToSchema, FromRow, Deserialize)]
 pub struct User {
+    #[schema(nullable = false)]
     pub id: Uuid,
+    #[schema(nullable = false, example = "John Johnson")]
     pub full_name: String,
 
-    #[sqlx(skip)]
+    #[schema(nullable = false, example = "attendee")]
     pub role: UserRole,
 
-    #[schema(nullable = false)]
+    #[schema(nullable = false, example = "johnson@noxel.com")]
     pub email: String,
 
     #[schema(nullable = false, example = 12345678901_i64)]

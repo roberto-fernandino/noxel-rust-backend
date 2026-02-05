@@ -1,8 +1,4 @@
-use axum::{
-    extract::State,
-    http::StatusCode,
-    Extension, Json,
-};
+use axum::{extract::State, http::StatusCode, Extension, Json};
 use tracing::info;
 
 use crate::{
@@ -21,6 +17,8 @@ use super::{
 };
 
 #[utoipa::path(
+    tag = "users",
+    operation_id = "signupOrganizer",
     post,
     path = "/users/signup/organizer",
     request_body = SignupOrganizerRequest,
@@ -39,7 +37,6 @@ pub async fn signup_organizer(
         full_name = %req.full_name,
         email = ?req.email,
         gov_identification = ?req.gov_identification,
-        birth_date = ?req.birth_date,
         password_len = req.password.len(),
         "signup request"
     );
@@ -53,7 +50,6 @@ pub async fn signup_organizer(
         role = "organizer",
         email = ?user.email,
         gov_identification = ?user.gov_identification,
-        birth_date = ?user.birth_date,
         status = 201,
         "signup response"
     );
@@ -62,12 +58,14 @@ pub async fn signup_organizer(
 }
 
 #[utoipa::path(
+    tag = "users",
     post,
     path = "/users/signup/attendee",
     request_body = SignupAttendeeRequest,
+
     responses(
         (status = 201, description = "Attendee signup", body = User)
-    )
+    ),
 )]
 pub async fn signup_attendee(
     State(state): State<AppState>,
@@ -85,7 +83,7 @@ pub async fn signup_attendee(
         "signup request"
     );
 
-    let (user, _consumer) = super::sql::create_attendee_with_data(&state.db, req).await?;
+    let (user, attendee_data) = super::sql::create_attendee_with_data(&state.db, req).await?;
 
     info!(
         target: "api.users.signup",
@@ -94,7 +92,8 @@ pub async fn signup_attendee(
         role = "attendee",
         email = ?user.email,
         gov_identification = ?user.gov_identification,
-        birth_date = ?user.birth_date,
+        phone = ?attendee_data.phone,
+        birth_date = ?attendee_data.birth_date,
         status = 201,
         "signup response"
     );

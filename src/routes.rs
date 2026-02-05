@@ -9,6 +9,7 @@ struct HealthResponse {
     ok: bool,
 }
 #[utoipa::path(
+    tag = "healthcheck",
     get,
     path = "/health",
     responses(
@@ -29,7 +30,8 @@ async fn health() -> ApiResult<StatusCode, HealthResponse> {
     components(schemas(
         HealthResponse,
         crate::apps::users::models::User,
-        crate::apps::users::requests::SignupAttendeeRequest, 
+        crate::apps::users::models::UserRole,
+        crate::apps::users::requests::SignupAttendeeRequest,
         crate::apps::users::requests::SignupOrganizerRequest,
     )),
     tags(
@@ -42,8 +44,5 @@ pub fn router() -> Router<AppState> {
     Router::new()
         .route("/health", get(health))
         .merge(crate::apps::users::routes::router())
-        .merge(
-            SwaggerUi::new("/swagger-ui")
-                .url("/api-doc/openapi.json", ApiDoc::openapi()),
-        )
+        .merge(SwaggerUi::new("/swagger-ui").url("/api-doc/openapi.json", ApiDoc::openapi()))
 }
