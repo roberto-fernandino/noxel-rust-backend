@@ -2,6 +2,7 @@ use crate::{results::ApiResult, state::AppState};
 use axum::{http::StatusCode, routing::get, Json, Router};
 use serde::Serialize;
 use utoipa::{OpenApi, ToSchema};
+use utoipa_swagger_ui::SwaggerUi;
 
 #[derive(Debug, Serialize, ToSchema)]
 struct HealthResponse {
@@ -41,4 +42,8 @@ pub fn router() -> Router<AppState> {
     Router::new()
         .route("/health", get(health))
         .merge(crate::apps::users::routes::router())
+        .merge(
+            SwaggerUi::new("/swagger-ui")
+                .url("/api-doc/openapi.json", ApiDoc::openapi()),
+        )
 }
