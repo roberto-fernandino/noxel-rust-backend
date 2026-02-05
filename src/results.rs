@@ -16,6 +16,9 @@ pub struct ApiErrorBody {
 
 #[derive(Debug, Error)]
 pub enum ApiError {
+    #[error("invalid role: {0}")]
+    InvalidRole(String),
+
     #[error("unauthorized")]
     Unauthorized,
 
@@ -48,6 +51,7 @@ impl ApiError {
             ApiError::MissingDatabaseUrl => StatusCode::INTERNAL_SERVER_ERROR,
             ApiError::Db(_) => StatusCode::INTERNAL_SERVER_ERROR,
             ApiError::Internal => StatusCode::INTERNAL_SERVER_ERROR,
+            ApiError::InvalidRole(_) => StatusCode::BAD_REQUEST,
         }
     }
 
@@ -60,6 +64,7 @@ impl ApiError {
             ApiError::MissingDatabaseUrl => Some("missing_database_url"),
             ApiError::Db(_) => Some("db_error"),
             ApiError::Internal => Some("internal"),
+            ApiError::InvalidRole(_) => Some("invalid_role"),
         }
     }
 }
@@ -75,4 +80,4 @@ impl IntoResponse for ApiError {
     }
 }
 
-pub type ApiResult<T> = Result<T, ApiError>;
+pub type ApiResult<T> = Result<(StatusCode, Json<T>), ApiError>;
