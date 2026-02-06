@@ -1,6 +1,7 @@
 use utoipa::ToSchema;
 
 #[derive(Debug, serde::Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct UserAddressRequest {
     /// CEP (Brazilian postal code)
     #[schema(nullable = false, example = "01001-000")]
@@ -29,6 +30,7 @@ pub struct UserAddressRequest {
 /// Request body for public signup endpoints.
 /// Role is inferred from the endpoint (organizer or attendee).
 #[derive(Debug, serde::Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct SignupOrganizerRequest {
     #[schema(nullable = false, example = "Johnson Smith")]
     pub full_name: String,
@@ -51,6 +53,7 @@ pub struct SignupOrganizerRequest {
 /// Request body for public signup endpoints.
 /// Role is inferred from the endpoint (organizer or attendee).
 #[derive(Debug, serde::Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct SignupAttendeeRequest {
     #[schema(nullable = false, example = "Robert Johnson Smith Junior the Third")]
     pub full_name: String,
