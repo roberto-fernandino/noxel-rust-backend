@@ -124,3 +124,30 @@ pub enum RelatedData {
     Organizer(OrganizerData),
     Attendee(AttendeeData),
 }
+
+#[derive(Debug, serde::Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UserAddress {
+    /// CEP (Brazilian postal code)
+    #[schema(nullable = false, example = "01001-000")]
+    pub cep: String,
+
+    #[schema(nullable = false, example = "Avenida Paulista")]
+    pub logradouro: String,
+
+    #[schema(nullable = false, example = "123")]
+    pub numero: String,
+
+    #[schema(nullable = true, example = "Apto 12")]
+    pub complemento: Option<String>,
+
+    #[schema(nullable = true, example = "Centro")]
+    pub bairro: Option<String>,
+
+    #[schema(nullable = false, example = "São Paulo")]
+    pub cidade: String,
+
+    /// State abbreviation (e.g. SP)
+    #[schema(nullable = false, example = "SP")]
+    pub estado: String,
+}

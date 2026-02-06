@@ -1,6 +1,8 @@
+use crate::apps::users::models::UserAddress;
+
 use super::{
     models::{AttendeeData, OrganizerData, User, UserRole, UserRow},
-    requests::{SignupAttendeeRequest, SignupOrganizerRequest, UserAddressRequest},
+    requests::{SignupAttendeeRequest, SignupOrganizerRequest},
 };
 use argon2::{
     password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
@@ -89,7 +91,7 @@ async fn insert_user<R: SignupRequestLike>(
 async fn insert_user_address(
     tx: &mut Transaction<'_, Postgres>,
     user_id: Uuid,
-    address: &UserAddressRequest,
+    address: &UserAddress,
 ) -> Result<(), sqlx::Error> {
     sqlx::query(
         r#"INSERT INTO user_address (

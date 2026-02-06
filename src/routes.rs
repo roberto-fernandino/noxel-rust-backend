@@ -34,7 +34,7 @@ async fn health() -> ApiResult<StatusCode, HealthResponse> {
         crate::apps::users::models::UserRole,
         crate::apps::users::requests::SignupAttendeeRequest,
         crate::apps::users::requests::SignupOrganizerRequest,
-        crate::apps::users::requests::UserAddressRequest,
+        crate::apps::users::models::UserAddress,
     )),
     tags(
         (name = "noxel", description = "Noxel Rust Backend")
