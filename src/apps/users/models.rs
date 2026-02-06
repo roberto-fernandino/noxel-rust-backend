@@ -14,7 +14,7 @@ use crate::results::ApiError;
 /// - `Promoter`: Promoter of the event
 /// - `Colaborator`: QR code reader in the event
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-#[serde(rename_all = "snake_case")]
+#[serde(rename_all = "camelCase")]
 pub enum UserRole {
     Organizer,   // Producer
     Attendee,    // Consumer
@@ -53,6 +53,7 @@ impl Default for UserRole {
 }
 
 #[derive(Debug, Clone, Serialize, ToSchema, FromRow, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct User {
     #[schema(nullable = false)]
     pub id: Uuid,
@@ -67,6 +68,9 @@ pub struct User {
 
     #[schema(nullable = false, example = 12345678901_i64)]
     pub gov_identification: i64,
+
+    #[schema(nullable = false, example = "2026-01-01T00:00:00Z")]
+    pub created_at: chrono::DateTime<chrono::Utc>,
 }
 
 /// Row returned from database for User (with role as string)
@@ -77,6 +81,7 @@ pub struct UserRow {
     pub role: String,
     pub email: String,
     pub gov_identification: i64,
+    pub created_at: chrono::DateTime<chrono::Utc>,
 }
 
 impl UserRow {
@@ -87,12 +92,14 @@ impl UserRow {
             role: UserRole::from_str(&self.role).unwrap_or(UserRole::Attendee),
             email: self.email,
             gov_identification: self.gov_identification,
+            created_at: self.created_at,
         }
     }
 }
 
 /// Organizer-specific data (1:1 with users where role = organizer)
 #[derive(Debug, Clone, Serialize, ToSchema, FromRow)]
+#[serde(rename_all = "camelCase")]
 pub struct OrganizerData {
     pub id: Uuid,
     pub user_id: Uuid,
@@ -101,6 +108,7 @@ pub struct OrganizerData {
 
 /// Consumer/Attendee-specific data (1:1 with users where role = attendee)
 #[derive(Debug, Clone, Serialize, ToSchema, FromRow)]
+#[serde(rename_all = "camelCase")]
 pub struct AttendeeData {
     pub id: Uuid,
     pub user_id: Uuid,
