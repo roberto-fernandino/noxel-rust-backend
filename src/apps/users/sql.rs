@@ -1,6 +1,6 @@
 use super::{
     models::{AttendeeData, OrganizerData, User, UserRole, UserRow},
-    requests::{SignupAttendeeRequest, SignupOrganizerRequest},
+    requests::{SignupAttendeeRequest, SignupOrganizerRequest, UserAddressRequest},
 };
 use argon2::{
     password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
@@ -86,12 +86,45 @@ async fn insert_user<R: SignupRequestLike>(
     Ok(row.into_user())
 }
 
+async fn insert_user_address(
+    tx: &mut Transaction<'_, Postgres>,
+    user_id: Uuid,
+    address: &UserAddressRequest,
+) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        r#"INSERT INTO user_address (
+              user_id,
+              cep,
+              logradouro,
+              numero,
+              complemento,
+              bairro,
+              cidade,
+              estado
+           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#,
+    )
+    .bind(user_id)
+    .bind(&address.cep)
+    .bind(&address.logradouro)
+    .bind(&address.numero)
+    .bind(&address.complemento)
+    .bind(&address.bairro)
+    .bind(&address.cidade)
+    .bind(&address.estado)
+    .execute(&mut **tx)
+    .await?;
+
+    Ok(())
+}
+
 pub async fn create_organizer_with_data(
     db: &PgPool,
     req: SignupOrganizerRequest,
 ) -> Result<(User, OrganizerData), sqlx::Error> {
     let mut tx = db.begin().await?;
     let user = insert_user(&mut tx, UserRole::Organizer, &req).await?;
+
+    insert_user_address(&mut tx, user.id, &req.address).await?;
 
     let org: OrganizerData = sqlx::query_as(
         r#"INSERT INTO organizer_data (user_id)
@@ -112,6 +145,8 @@ pub async fn create_attendee_with_data(
 ) -> Result<(User, AttendeeData), sqlx::Error> {
     let mut tx = db.begin().await?;
     let user = insert_user(&mut tx, UserRole::Attendee, &req).await?;
+
+    insert_user_address(&mut tx, user.id, &req.address).await?;
 
     let consumer: AttendeeData = sqlx::query_as::<_, AttendeeData>(
         r#"INSERT INTO consumer_data (user_id, phone, birth_date)

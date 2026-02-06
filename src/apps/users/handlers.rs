@@ -1,5 +1,5 @@
 use axum::{extract::State, http::StatusCode, Extension, Json};
-use tracing::{info, error};
+use tracing::{error, info};
 
 use crate::{
     apps::users::{
@@ -11,10 +11,7 @@ use crate::{
     AppState,
 };
 
-use super::{
-    models::User,
-    requests::{SignupAttendeeRequest, SignupOrganizerRequest},
-};
+use super::{models::User, requests::{SignupAttendeeRequest, SignupOrganizerRequest}};
 
 #[utoipa::path(
     tag = "users",
@@ -22,9 +19,7 @@ use super::{
     post,
     path = "/users/signup/organizer",
     request_body = SignupOrganizerRequest,
-    responses(
-        (status = 201, description = "Organizer signup", body = SignupResponse)
-    )
+    responses((status = 201, description = "Organizer signup", body = SignupResponse))
 )]
 pub async fn signup_organizer(
     State(state): State<AppState>,
@@ -37,6 +32,9 @@ pub async fn signup_organizer(
         full_name = %req.full_name,
         email = ?req.email,
         gov_identification = ?req.gov_identification,
+        cep = %req.address.cep,
+        cidade = %req.address.cidade,
+        estado = %req.address.estado,
         password_len = req.password.len(),
         "signup request"
     );
@@ -71,10 +69,7 @@ pub async fn signup_organizer(
     post,
     path = "/users/signup/attendee",
     request_body = SignupAttendeeRequest,
-
-    responses(
-        (status = 201, description = "Attendee signup", body = SignupResponse)
-    )
+    responses((status = 201, description = "Attendee signup", body = SignupResponse))
 )]
 pub async fn signup_attendee(
     State(state): State<AppState>,
@@ -88,6 +83,9 @@ pub async fn signup_attendee(
         email = ?req.email,
         gov_identification = ?req.gov_identification,
         birth_date = ?req.birth_date,
+        cep = %req.address.cep,
+        cidade = %req.address.cidade,
+        estado = %req.address.estado,
         password_len = req.password.len(),
         "signup request"
     );
